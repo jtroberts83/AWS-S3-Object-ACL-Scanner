@@ -139,7 +139,7 @@ outf.close()
 
 print(out_string)
 print("Found %s S3 objects open to the world.  \n Processed %s S3 Keys in %s buckets with %s Object Access Denied Errors, %s Read Grant Access and %s Bucket Access Denied OR Bucket Empty Errors" % (openfilescounter,keycounter,S3validbuckets,errorcounter,errorcounter2,S3errorcounter))
-print("\n The following Buckets Have a Deny Statement blocking %s role access:\n" % roleToAssume)
+print("\n The following Buckets Have a Deny Statement blocking %s role access OR they are empty:\n" % roleToAssume)
 
 ### Print out each key's info that is Public
 for lockedbucket in lockedbuckets:
