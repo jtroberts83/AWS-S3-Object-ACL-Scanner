@@ -14,6 +14,7 @@ from threading import Lock
 roleToAssume = 'SomeRoleName'
 account = 'AccountNumber'
 out_filename = 'S3-Public-Objects.txt'
+threadcount = 100
 
 
 ### Counters used for stats at the end of script run
@@ -95,7 +96,7 @@ key_queue = Queue()
 
 
 ### Here is where it creates multiple threads.  In this example it uses 100 threads.  Adjust for your instance type/resources
-for i in range(100):
+for i in range(threadcount):
     t = threading.Thread(target=process_queue)
     t.daemon = True
     t.start()
