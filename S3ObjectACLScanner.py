@@ -11,7 +11,7 @@ from threading import Lock
 #################################
 ##   Set the following Vars    ##
 #################################
-roleToAssume = 'SomeRoleName'
+roleToAssume = 'SomeRoleName'  ## Role needs to have read access to every bucket it needs to scan
 account = 'AccountNumber'
 out_filename = 'S3-Public-Objects.txt'
 threadcount = 100
@@ -39,8 +39,10 @@ SecretAccessKey = response['Credentials']['SecretAccessKey']
 SessionToken = response['Credentials']['SessionToken']
 print('Access Key Aquired -  ',AccessKey)
 
+### Specifies the AllUsers group to look for in the objects ACLs
 all_users = 'http://acs.amazonaws.com/groups/global/AllUsers'
 
+### Create S3 client with STS temp creds aquired above and gets a list of all buckets in the account
 s3 = boto3.client('s3',aws_access_key_id=AccessKey,aws_secret_access_key=SecretAccessKey,aws_session_token=SessionToken)
 
 allbuckets = (s3.list_buckets())['Buckets']
@@ -53,21 +55,25 @@ for bucket in allbuckets:
 
 print_lock = threading.Lock()
 out_lines = []
+
+###  update function which cycles through each key in the Queue checking its ACL permissions
 def update(key):
     with print_lock:
         print("Starting thread : {}".format(threading.current_thread().name))
     global keycounter
     keycounter += 1
-
+    
+    ###  Try to get the objects ACL
     try:
         acl = s3.get_object_acl(Bucket=key[1],Key=key[0])
 
-        ###  Loop through each Grant found on the key
+        ###  Loop through each Grant found on the object
         for grant in acl['Grants']:
             #print(grant)
             try:
                 grantinfo = grant['Grantee']['URI']
                 #print(grantinfo)
+                
                 ###  If the Grant found is the All Users Grant then add it to the log file and print info
                 if grantinfo == all_users:
                     global openfilescounter
@@ -77,7 +83,7 @@ def update(key):
             except KeyError:
                 global errorcounter
                 errorcounter += 1
-
+    ### If it errors out trying to get the objects ACL
     except:
         global errorcounter2
         errorcounter2 += 1
@@ -112,6 +118,7 @@ for bucketname in bucketnames:
         allobjects = s3.list_objects(Bucket=bucketname)
         #print(allobjects)
         allkeys =[]
+        
         ### For each object found in the bucket create an array of key,bucketname for every object in that bucket
         for s3object in allobjects['Contents']:
             somevar = [s3object['Key'],bucketname]
