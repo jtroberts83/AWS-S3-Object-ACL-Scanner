@@ -114,16 +114,14 @@ start = time.time()
 for bucketname in bucketnames:
 
     try:
-        ### Gets an array of all objects in the bucket
-        allobjects = s3.list_objects(Bucket=bucketname)
-        #print(allobjects)
-        allkeys =[]
-        
-        ### For each object found in the bucket create an array of key,bucketname for every object in that bucket
-        for s3object in allobjects['Contents']:
-            somevar = [s3object['Key'],bucketname]
-            key_queue.put(somevar)
-        S3validbuckets += 1
+        allobjects = s3.get_paginator('list_objects')
+        for p in allobjects.paginate(Bucket=bucketname):
+            #print(p)
+            allkeys =[]
+            for s3object in p['Contents']:
+                somevar = [s3object['Key'],bucketname]
+                key_queue.put(somevar)
+            S3validbuckets += 1
     except:
         S3errorcounter += 1
         lockedbuckets.append(bucketname)
