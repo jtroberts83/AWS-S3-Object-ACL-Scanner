@@ -6,16 +6,20 @@ import boto3
 import json
 from threading import Lock
 
-
-
-#################################
-##   Set the following Vars    ##
-#################################
-roleToAssume = 'SomeRoleName'  ## Role needs to have read access to every bucket it needs to scan
-account = 'AccountNumber'
-out_filename = 'S3-Public-Objects.txt'
+### Configurable vars
 threadcount = 100
 
+# Read active AWS account by open session & role
+account = boto3.client('sts').get_caller_identity().get('Account')
+
+# Load bucket inventory file
+inventory = f"inventory/phase1-{account}.list"
+file = open(inventory, 'r')
+f = file.read()
+bucketnames = f.splitlines()
+
+# Set output
+out_filename = f"S3-Public-Objects-{account}.txt"
 
 ### Counters used for stats at the end of script run
 keycounter=0
@@ -25,34 +29,12 @@ S3errorcounter=0
 S3validbuckets=0
 openfilescounter=0
 
-
-####  STS Get Temp Creds for roleToAssume (Role used must have access to the S3 buckets being scanned ####
-stsClient = boto3.client('sts')
-roleArn=("arn:aws:iam::%s:role/%s" % (account,roleToAssume))
-response = stsClient.assume_role(
-        RoleArn=roleArn,
-        RoleSessionName='S3_Object_ACL_CheckerAssumed',
-        DurationSeconds=3600,
-    )
-AccessKey = response['Credentials']['AccessKeyId']
-SecretAccessKey = response['Credentials']['SecretAccessKey']
-SessionToken = response['Credentials']['SessionToken']
-print('Access Key Aquired -  ',AccessKey)
-
 ### Specifies the AllUsers group to look for in the objects ACLs
 all_users = 'http://acs.amazonaws.com/groups/global/AllUsers'
 
-### Create S3 client with STS temp creds aquired above and gets a list of all buckets in the account
-s3 = boto3.client('s3',aws_access_key_id=AccessKey,aws_secret_access_key=SecretAccessKey,aws_session_token=SessionToken)
+s3 = boto3.client('s3')
 
-allbuckets = (s3.list_buckets())['Buckets']
-#print(allbuckets)
-bucketnames = []
 lockedbuckets = []
-for bucket in allbuckets:
-        bucketnames.append(bucket['Name'])
-#print(bucketnames)
-
 print_lock = threading.Lock()
 out_lines = []
 
